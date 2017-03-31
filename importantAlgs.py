@@ -43,3 +43,23 @@ def dykstra(graph,source):
 
     dist[source] = 0
     while len(unVisited) > 0:
+
+
+def BellmanFord(graph,source):
+    """
+    Like Dykstra's but supports negative weights
+    # dynamic progrmming
+    """
+    print("lol")
+
+def Kruskall(graph):
+    """
+    Returns minimum spanning tree of graph
+    """
+    print('lmao')
+
+def Ford Fulkerson(Graph, source, terminal):
+    """
+    Returns maximum flow between source and terminal nodes of a graph
+    """
+    print('haha')
