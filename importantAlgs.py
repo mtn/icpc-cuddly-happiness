@@ -1,4 +1,5 @@
 import heapq
+import math
 
 def union(data,a,b):
     '''
@@ -102,8 +103,64 @@ def Kruskall(graph):
             union(UF,pu,pv)
     return minSpanTree
 
-def FordFulkerson(Graph, source, terminal):
+
+def residualGraph(graph, flow, delta):
     """
-    Returns maximum flow between source and terminal nodes of a graph
+    Input: graph  {node : [(neighbor,capacity)]}
+           flow   {(u,v) : flow}
+    Delta scaling rule, residual graph ignores weights smaller than delta
+    Output: residual graph {node : [(neighbor,capacity)]}
     """
-    print('haha')
+    rg = {}
+    for u in graph:
+        for v,c in graph[u]:
+            forward = flow[(u,v)]
+            backward = c - flow[(u,v)]
+            assert foward >= 0, 'flow error1'
+            assert backward >= 0 'flow error2'
+            if forward > delta:
+                rg[(u,v)] = forward
+            if backward > delta:
+                rg[(v,u)] = backward
+    return rg
+
+def imrpovingFlow(residualGraph, source, terminal):
+    """
+    I: residual graph, source node, terminal node
+    O: improvingFlow
+    """
+    dist, prev = dykstra(residualGraph,source)
+    if dist[terminal] == float('inf'):
+        return None
+    else:
+        v = terminal
+        u = None
+        path = []
+        mincap = float('inf')
+        while u != source:
+            u = prev[v]
+            ###
+
+def FordFulkerson(graph, source, terminal):
+    """
+    I: graph { node: [(neighbor,capacity)]}
+       source and terminal nodes
+    O: maximum flow between source and terminal nodes of a graph
+    """
+    # Initialize all zero flow, and use delta scaling rule
+    flow = {}
+    totalCapacity = 0
+    for u in graph:
+        for v,cap in graph[u]:
+            flow[(u,v)] = 0
+            totalCapacity += cap
+    delta = int(math.log2(totalCapacity))
+    # Iterate until no improving flow
+    while delta > 0:
+    rg = residualGraph(graph,flow)
+    imp_f = improvingFlow(rg,source,terminal)
+    if imp_f:
+        pass # Augment flow
+    else:
+        delta //= 2
+    return flow
