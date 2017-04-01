@@ -152,7 +152,8 @@ Graph* Graph::dijkstra(Key startNode)
         // If not, add it into the graph. It is the least distance node from
         // start at this point. Then enqueue all attached nodes.
         outGraph->insertNode(wp.k, wp.w);
-        outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from].value);
+        if (wp.k != wp.from)
+          outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from].value);
 
         auto neighbors = (*this)[wp.k].getNeighbors();
         for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
