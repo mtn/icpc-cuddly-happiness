@@ -4,7 +4,6 @@
 
 #include <list>
 #include <string>
-#include <queue>
 #include <unordered_map>
 
 typedef std::string Key;
@@ -17,7 +16,7 @@ class GraphNode{
 
     Value value;
 
-    std::list<std::pair<const Key, Weight>> getNeighbors();
+    std::list<std::pair<const Key, Weight>>* getNeighbors();
     void addNeighbor(const Key& k, Weight weight);
     void removeNeighbor(const Key& k);
 

@@ -1,5 +1,8 @@
 
 #include <iostream>
+#include <queue>
+#include <set>
+
 #include "Graph.h"
 
 // From: http://stackoverflow.com/questions/3767869/adding-message-to-assert
@@ -16,9 +19,9 @@
 #   define ASSERT(condition, message) do { } while (false)
 #endif
 
-std::list<std::pair<const Key, Weight>> GraphNode::getNeighbors()
+std::list<std::pair<const Key, Weight>>* GraphNode::getNeighbors()
 {
-  return this->neighbors;
+  return &this->neighbors;
 }
 
 void GraphNode::addNeighbor(const Key& k, Weight weight)
@@ -105,4 +108,66 @@ void Graph::makeEdge(const Key& k, const Key& j, Weight weight)
   }
   else
     ASSERT(0, "Graph Does Not Contain " + k);
+}
+
+struct WeightPair
+{
+  Key k;
+  Key from;
+  Weight w;
+};
+
+/**
+ * Finds the shortest path from the start node to every node it is connected to.
+ *
+ * Input: A key in the graph
+ * Output: A graph where each node holds the distance from the startNode to
+ * that node and is connected to only one other node, the node closest to the
+ * startNode from that node.
+ */
+Graph* Graph::dijkstra(Key startNode)
+{
+  if (containsNode(startNode))
+  {
+    Graph* outGraph = new Graph();
+
+    std::queue<WeightPair> nextNodes;
+    nextNodes.push(WeightPair{startNode, startNode, 0});
+
+    while (!nextNodes.empty())
+    {
+      // Dequeue the next item from the queue
+      WeightPair wp = nextNodes.front();
+      nextNodes.pop();
+
+      // Determine if the node that this item is representing has already been
+      // added to the graph
+      if (outGraph->containsNode(wp.k))
+      {
+        // If so, skip this item.
+        continue;
+      }
+      else
+      {
+        // If not, add it into the graph. It is the least distance node from
+        // start at this point. Then enqueue all attached nodes.
+        outGraph->insertNode(wp.k, wp.w);
+        outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from].value);
+
+        auto neighbors = (*this)[wp.k].getNeighbors();
+        for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
+        {
+          // Push a WeightPair which points to the node at the end of this edge,
+          // points from the current node we are looking at, and has a weight
+          // of the distance from this node to the start plus the edge.
+          nextNodes.push(WeightPair{it->first, wp.k, wp.w + it->second});
+        }
+      }
+    }
+
+    return outGraph;
+  }
+  else
+    ASSERT(0, "Graph Does Not Contain " + startNode);
+  return nullptr;
 }
