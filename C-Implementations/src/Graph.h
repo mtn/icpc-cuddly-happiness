@@ -16,9 +16,11 @@ class GraphNode{
 
     Value value;
 
-    std::list<std::pair<const Key, Weight>>* getNeighbors();
+    const std::list<std::pair<const Key, Weight>>* getNeighbors() const;
     void addNeighbor(const Key& k, Weight weight);
     void removeNeighbor(const Key& k);
+
+    bool operator==(GraphNode* g) const;
 
   private:
     std::list<std::pair<const Key, Weight>> neighbors;
@@ -29,15 +31,17 @@ class Graph{
   public:
     ~Graph();
 
-    bool containsNode(const Key& k);
+    bool containsNode(const Key& k) const;
     void insertNode(const Key& k, Value v);
     Value updateNode(const Key& k, Value v);
     Value removeNode(const Key& k);
     void makeEdge(const Key& k, const Key& v, Weight weight);
-    GraphNode getNode(const Key& k);
-    GraphNode operator[](const Key& k);
+    const GraphNode* getNode(const Key& k) const;
+    const GraphNode* operator[](const Key& k) const;
 
     Graph* dijkstra(Key startNode);
+
+    bool operator==(const Graph* g) const;
   private:
     std::unordered_map<Key, GraphNode> nodes;
 };

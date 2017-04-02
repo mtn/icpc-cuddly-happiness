@@ -19,7 +19,7 @@
 #   define ASSERT(condition, message) do { } while (false)
 #endif
 
-std::list<std::pair<const Key, Weight>>* GraphNode::getNeighbors()
+const std::list<std::pair<const Key, Weight>>* GraphNode::getNeighbors() const
 {
   return &this->neighbors;
 }
@@ -46,8 +46,18 @@ void GraphNode::removeNeighbor(const Key& k)
   }
 }
 
+/**
+ * Input:  Pointer to another graph node
+ * Output: Whether or not the value stored in these two nodes
+ *         are the same as well as their connections.
+ */
+bool GraphNode::operator==(GraphNode* g) const
+{
+  return g->value == value && this->neighbors == g->neighbors;
+}
+
 // Determine if the backing map of nodes contains key
-bool Graph::containsNode(const Key& k)
+bool Graph::containsNode(const Key& k) const
 {
   return this->nodes.find(k) != this->nodes.end();
 }
@@ -85,12 +95,12 @@ Value Graph::removeNode(const Key& key)
   return value;
 }
 
-GraphNode Graph::getNode(const Key& key)
+const GraphNode* Graph::getNode(const Key& key) const
 {
-  return this->nodes[key].value;
+  return &(this->nodes.find(key)->second);
 }
 
-GraphNode Graph::operator[](const Key& key)
+const GraphNode* Graph::operator[](const Key& key) const
 {
   return this->getNode(key);
 }
@@ -153,9 +163,9 @@ Graph* Graph::dijkstra(Key startNode)
         // start at this point. Then enqueue all attached nodes.
         outGraph->insertNode(wp.k, wp.w);
         if (wp.k != wp.from)
-          outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from].value);
+          outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from]->value);
 
-        auto neighbors = (*this)[wp.k].getNeighbors();
+        auto neighbors = (*this)[wp.k]->getNeighbors();
         for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
         {
           // Push a WeightPair which points to the node at the end of this edge,
@@ -171,4 +181,36 @@ Graph* Graph::dijkstra(Key startNode)
   else
     ASSERT(0, "Graph Does Not Contain " + startNode);
   return nullptr;
+}
+
+/**
+ * Input:  A Graph*
+ * Output: Whether or not this Graph has the same nodes and edges as the given
+ */
+bool Graph::operator==(const Graph* g) const
+{
+  // For every element node in this graph
+  auto it = this->nodes.begin();
+  for (;it != this->nodes.end(); ++it)
+  {
+    // If the other map does not contain the same keys as this one then we
+    // have failed
+    if (!g->containsNode(it->first))
+    {
+      return false;
+    }
+
+    // Ensure that edges and values stored are the same
+    if (!((*this)[it->first] == (*g)[it->first])) return false;
+  }
+
+  // Check that the other Graph has no nodes in it that this does not.
+  it = g->nodes.begin();
+  for (;it != g->nodes.end(); ++it)
+  {
+    if (!this->containsNode(it->first)) return false;
+  }
+
+  // If the Graphs have the same nodes with the same edges return true.
+  return true;
 }
