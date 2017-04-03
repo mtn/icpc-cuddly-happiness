@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include "Graph.h"
 
 int main(void)
@@ -49,4 +50,9 @@ int main(void)
   expectedOutput.makeEdge("E", "D", 2);
   expectedOutput.makeEdge("F", "C", 3);
   expectedOutput.makeEdge("G", "D", 5);
+
+  bool gotExpected = output == &expectedOutput;
+  std::cout << "Got expected output:" << gotExpected << '\n';
+  if (!gotExpected)
+    output->print();
 }

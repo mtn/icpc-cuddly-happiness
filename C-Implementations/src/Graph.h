@@ -13,6 +13,7 @@ typedef int         Weight;
 class GraphNode{
   public:
     GraphNode(Value value) : value(value) {};
+    ~GraphNode();
 
     Value value;
 
@@ -21,6 +22,8 @@ class GraphNode{
     void removeNeighbor(const Key& k);
 
     bool operator==(GraphNode* g) const;
+
+    void print() const;
 
   private:
     std::list<std::pair<const Key, Weight>> neighbors;
@@ -42,8 +45,11 @@ class Graph{
     Graph* dijkstra(Key startNode);
 
     bool operator==(const Graph* g) const;
+
+    void print() const;
+    
   private:
-    std::unordered_map<Key, GraphNode> nodes;
+    std::unordered_map<Key, GraphNode*> nodes;
 };
 
 #endif

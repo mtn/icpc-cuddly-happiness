@@ -19,6 +19,11 @@
 #   define ASSERT(condition, message) do { } while (false)
 #endif
 
+GraphNode::~GraphNode()
+{
+
+}
+
 const std::list<std::pair<const Key, Weight>>* GraphNode::getNeighbors() const
 {
   return &this->neighbors;
@@ -53,7 +58,24 @@ void GraphNode::removeNeighbor(const Key& k)
  */
 bool GraphNode::operator==(GraphNode* g) const
 {
-  return g->value == value && this->neighbors == g->neighbors;
+  if (value != g->value) return false;
+
+  // Check to see if they have the same edges
+  for (auto it = this->neighbors.begin(); it != this->neighbors.end(); ++it)
+  {
+
+  }
+
+  return true;
+}
+
+Graph::~Graph()
+{
+  auto it = this->nodes.begin();
+  for (;it != this->nodes.end(); ++it)
+  {
+    delete it->second;
+  }
 }
 
 // Determine if the backing map of nodes contains key
@@ -65,31 +87,40 @@ bool Graph::containsNode(const Key& k) const
 // Insert a new node Weighto the graph with the given value
 void Graph::insertNode(const Key& key, Value value)
 {
-  this->nodes[key] = GraphNode(value);
+  this->nodes[key] = new GraphNode(value);
 }
 
 Value Graph::updateNode(const Key& key, Value newValue)
 {
-  Value prevValue = this->nodes[key].value;
-  this->nodes[key].value = newValue;
+  Value prevValue = this->nodes[key]->value;
+  this->nodes[key]->value = newValue;
   return prevValue;
 }
 
 Value Graph::removeNode(const Key& key)
 {
   // Get the value of the removed node
-  Value value = this->nodes[key].value;
+  GraphNode* node = this->nodes[key];
+  Value value = node->value;
 
   // Create an iterator and go through each element in the map and remove
   // any edges from nodes to the node named key
-  for (auto it = this->nodes.begin(); it != this->nodes.end(); ++it)
+  for (auto it = this->nodes.begin(); it != this->nodes.end();)
   {
     // Skip the key being removed itself
-    if (it->first == key) continue;
+    if (it->first == key)
+    {
+      // Remove nodes matching key from the graph.
+      it = this->nodes.erase(it);
+    }
 
     // Otherwise, remove neighbors to the attached node originating from key
-    it->second.removeNeighbor(key);
+    it->second->removeNeighbor(key);
+    ++it;
   }
+
+  // Get rid of the node at that position.
+  delete node;
 
   // Return value of the removed node
   return value;
@@ -97,7 +128,7 @@ Value Graph::removeNode(const Key& key)
 
 const GraphNode* Graph::getNode(const Key& key) const
 {
-  return &(this->nodes.find(key)->second);
+  return this->nodes.find(key)->second;
 }
 
 const GraphNode* Graph::operator[](const Key& key) const
@@ -112,7 +143,7 @@ void Graph::makeEdge(const Key& k, const Key& j, Weight weight)
   if (containsNode(k))
   {
     if (containsNode(j))
-      this->nodes[k].addNeighbor(j, weight); // If both are link them together
+      this->nodes[k]->addNeighbor(j, weight); // If both are link them together
     else
       ASSERT(0, "Graph Does Not Contain " + j);
   }
@@ -126,6 +157,17 @@ struct WeightPair
   Key from;
   Weight w;
 };
+
+bool operator<(const WeightPair& a, const WeightPair& b)
+{
+  std::cout << "Comparing " << a.k << "(" << a.w << ")" << " to " << b.k << " (" << b.w << ")\n";
+  return a.w > b.w;
+}
+
+void printWP(WeightPair wp)
+{
+  std::cout << "WP: " << wp.k << " (" << wp.w << ") from " << wp.from << "\n";
+}
 
 /**
  * Finds the shortest path from the start node to every node it is connected to.
@@ -141,14 +183,16 @@ Graph* Graph::dijkstra(Key startNode)
   {
     Graph* outGraph = new Graph();
 
-    std::queue<WeightPair> nextNodes;
+    std::priority_queue<WeightPair> nextNodes;
     nextNodes.push(WeightPair{startNode, startNode, 0});
 
     while (!nextNodes.empty())
     {
       // Dequeue the next item from the queue
-      WeightPair wp = nextNodes.front();
+      WeightPair wp = nextNodes.top();
       nextNodes.pop();
+
+      printWP(wp);
 
       // Determine if the node that this item is representing has already been
       // added to the graph
@@ -213,4 +257,22 @@ bool Graph::operator==(const Graph* g) const
 
   // If the Graphs have the same nodes with the same edges return true.
   return true;
+}
+
+void GraphNode::print() const
+{
+  std::cout << "Value: " << value << '\n';
+  for (auto it = this->neighbors.begin(); it != this->neighbors.end(); ++it)
+  {
+    std::cout << "Neighbor: " << it->first << " (" << it->second << ")\n";
+  }
+}
+
+void Graph::print() const
+{
+  for (auto it = this->nodes.begin(); it != this->nodes.end(); ++it)
+  {
+    std::cout << "Node (" << it->first << ")";
+    it->second->print();
+  }
 }

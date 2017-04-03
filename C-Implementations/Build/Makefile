@@ -1,6 +1,6 @@
 
-CC = /usr/bin/gcc
-CFlags = -Wall -Wextra -std=c++11 -libc++
+CC = clang++
+CFlags = -Wall -Wextra -std=c++14 -stdlib=libc++
 
 Graph = ../src/Graph.cpp ../src/Graph.h
 GraphSrc = ../src/Graph.cpp
