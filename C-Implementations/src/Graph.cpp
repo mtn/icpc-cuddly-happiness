@@ -226,6 +226,7 @@ struct WeightPair
   Key k;
   Key from;
   Weight w;
+  Weight edgeWeight;
 };
 
 bool operator<(const WeightPair& a, const WeightPair& b)
@@ -253,7 +254,7 @@ Graph* Graph::dijkstra(Key startNode)
     Graph* outGraph = new Graph();
 
     std::priority_queue<WeightPair> nextNodes;
-    nextNodes.push(WeightPair{startNode, startNode, 0});
+    nextNodes.push(WeightPair{startNode, startNode, 0, 0});
 
     while (!nextNodes.empty())
     {
@@ -274,7 +275,7 @@ Graph* Graph::dijkstra(Key startNode)
         // start at this point. Then enqueue all attached nodes.
         outGraph->insertNode(wp.k, wp.w);
         if (wp.k != wp.from)
-          outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from]);
+          outGraph->makeEdge(wp.k, wp.from, wp.edgeWeight);
 
         auto neighbors = (*this).getNode(wp.k)->getNeighbors();
         for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
@@ -282,7 +283,7 @@ Graph* Graph::dijkstra(Key startNode)
           // Push a WeightPair which points to the node at the end of this edge,
           // points from the current node we are looking at, and has a weight
           // of the distance from this node to the start plus the edge.
-          nextNodes.push(WeightPair{it->first, wp.k, wp.w + it->second});
+          nextNodes.push(WeightPair{it->first, wp.k, wp.w + it->second, it->second});
         }
       }
     }
@@ -320,14 +321,61 @@ Graph* Graph::clone()
   return copy;
 }
 
+Graph* Graph::frodFulkersonDij(const Key& source, const Key& terminal)
+{
+  ASSERT(containsNode(source), "Does not contain source node " + source);
+  ASSERT(containsNode(terminal), "Does not contain terminal node " + terminal);
+
+  Graph* outGraph = new Graph();
+
+  std::priority_queue<WeightPair> nextNodes;
+  nextNodes.push(WeightPair{source, source, INT_MIN, 0});
+
+  while (!nextNodes.empty())
+  {
+    // Dequeue the next item from the queue
+    WeightPair wp = nextNodes.top();
+    nextNodes.pop();
+
+    // Determine if the node that this item is representing has already been
+    // added to the graph
+    if (outGraph->containsNode(wp.k))
+    {
+      // If so, skip this item.
+      continue;
+    }
+    else
+    {
+      // If not, add it into the graph. It is the least distance node from
+      // start at this point. Then enqueue all attached nodes.
+      outGraph->insertNode(wp.k, wp.w);
+      if (wp.k != wp.from)
+        outGraph->makeEdge(wp.k, wp.from, wp.edgeWeight);
+
+      // Terminate early
+      if (wp.k == terminal) return outGraph;
+
+      auto neighbors = (*this).getNode(wp.k)->getNeighbors();
+      for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
+      {
+        // Push a WeightPair which points to the node at the end of this edge,
+        // points from the current node we are looking at, and has a weight
+        // of the distance from this node to the start plus the edge.
+        nextNodes.push(WeightPair{it->first, wp.k, std::max(-it->second, wp.w), it->second});
+      }
+    }
+  }
+
+  return outGraph;
+}
+
 Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
 {
   Graph* resid = this->clone();
-  resid->print();
 
   Weight maxFlow = 0;
 
-  Graph* dij = resid->dijkstra(source);
+  Graph* dij = resid->frodFulkersonDij(source, terminal);
 
   while (dij->containsNode(terminal))
   {
@@ -381,9 +429,7 @@ Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
 
     maxFlow += pathFlow;
     delete dij;
-    dij = resid->dijkstra(source);
-    std::cout << "-------------" << "\n";
-    resid->print();
+    dij = resid->frodFulkersonDij(source, terminal);
   }
 
   return maxFlow;
