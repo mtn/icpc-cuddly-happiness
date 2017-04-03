@@ -21,7 +21,7 @@ class GraphNode{
     void addNeighbor(const Key& k, Weight weight);
     void removeNeighbor(const Key& k);
 
-    bool operator==(GraphNode* g) const;
+    bool operator==(const GraphNode* g) const;
 
     void print() const;
 
@@ -47,7 +47,7 @@ class Graph{
     bool operator==(const Graph* g) const;
 
     void print() const;
-    
+
   private:
     std::unordered_map<Key, GraphNode*> nodes;
 };

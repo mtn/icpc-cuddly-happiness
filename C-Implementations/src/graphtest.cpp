@@ -51,8 +51,13 @@ int main(void)
   expectedOutput.makeEdge("F", "C", 3);
   expectedOutput.makeEdge("G", "D", 5);
 
-  bool gotExpected = output == &expectedOutput;
+  bool gotExpected = (expectedOutput == output);
   std::cout << "Got expected output:" << gotExpected << '\n';
   if (!gotExpected)
+  {
+    std::cout << "Output Graph\n";
     output->print();
+    std::cout << "Expected Output Graph:\n";
+    expectedOutput.print();
+  }
 }

@@ -56,14 +56,33 @@ void GraphNode::removeNeighbor(const Key& k)
  * Output: Whether or not the value stored in these two nodes
  *         are the same as well as their connections.
  */
-bool GraphNode::operator==(GraphNode* g) const
+bool GraphNode::operator==(const GraphNode* g) const
 {
   if (value != g->value) return false;
 
   // Check to see if they have the same edges
   for (auto it = this->neighbors.begin(); it != this->neighbors.end(); ++it)
   {
+    // If the element at it is not within neighbors, return false
+    // They don't have the same items
+    if (std::find(g->neighbors.begin(), g->neighbors.end(), *it) == g->neighbors.end())
+    {
+      std::cout << "no index found in first\n";
+      return false;
+    }
+  }
 
+  // Make sure that there are no elements in this GraphNode that are not
+  // in the other
+  for (auto it = g->neighbors.begin(); it != g->neighbors.end(); ++it)
+  {
+    // If the element at it is not within neighbors, return false
+    // They don't have the same items
+    if (std::find(this->neighbors.begin(), this->neighbors.end(), *it) == this->neighbors.end())
+    {
+      std::cout << "no index found in last\n";
+      return false;
+    }
   }
 
   return true;
@@ -160,7 +179,6 @@ struct WeightPair
 
 bool operator<(const WeightPair& a, const WeightPair& b)
 {
-  std::cout << "Comparing " << a.k << "(" << a.w << ")" << " to " << b.k << " (" << b.w << ")\n";
   return a.w > b.w;
 }
 
@@ -191,8 +209,6 @@ Graph* Graph::dijkstra(Key startNode)
       // Dequeue the next item from the queue
       WeightPair wp = nextNodes.top();
       nextNodes.pop();
-
-      printWP(wp);
 
       // Determine if the node that this item is representing has already been
       // added to the graph
@@ -233,6 +249,7 @@ Graph* Graph::dijkstra(Key startNode)
  */
 bool Graph::operator==(const Graph* g) const
 {
+  std::cout << "Calling Equality\n";
   // For every element node in this graph
   auto it = this->nodes.begin();
   for (;it != this->nodes.end(); ++it)
@@ -241,11 +258,12 @@ bool Graph::operator==(const Graph* g) const
     // have failed
     if (!g->containsNode(it->first))
     {
+      std::cout << "Missing node " << it->first << "\n";
       return false;
     }
 
     // Ensure that edges and values stored are the same
-    if (!((*this)[it->first] == (*g)[it->first])) return false;
+    if (!(*((*this)[it->first]) == (*g)[it->first])) return false;
   }
 
   // Check that the other Graph has no nodes in it that this does not.
