@@ -78,4 +78,7 @@ int main(void)
   ff0.makeEdge("b", "t", 1);
 
   std::cout << "Ford Fulkerson Result: " << ff0.fordFulkerson("s", "t") << "\n";
+  std::cout << "FF Crazy A-H (1)" << input.fordFulkerson("A", "H") << "\n";
+  std::cout << "FF Crazy A-C (12)" << input.fordFulkerson("A", "C") << "\n";
+  std::cout << "FF Crazy A-D (9)\n" << input.fordFulkerson("A", "D") << "\n";
 }

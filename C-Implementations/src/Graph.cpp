@@ -193,6 +193,16 @@ void Graph::makeEdge(const Key& k, const Key& j, Weight weight)
   this->nodes[k]->addNeighbor(j, weight); // If both are link them together
 }
 
+Weight Graph::removeEdge(const Key& k, const Key& j)
+{
+  // Ensure that both given nodes are in the graph
+  ASSERT(containsNode(k), "Graph Does Not Contain " + k);
+  ASSERT(containsNode(j), "Graph Does Not Contain " + j);
+
+  Weight w = this->nodes[k]->removeNeighbor(j);
+  return w;
+}
+
 Weight Graph::updateEdge(const Key& k, const Key& v, Weight weight)
 {
   // Ensure that both given nodes are in the graph
@@ -313,6 +323,7 @@ Graph* Graph::clone()
 Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
 {
   Graph* resid = this->clone();
+  resid->print();
 
   Weight maxFlow = 0;
 
@@ -371,6 +382,8 @@ Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
     maxFlow += pathFlow;
     delete dij;
     dij = resid->dijkstra(source);
+    std::cout << "-------------" << "\n";
+    resid->print();
   }
 
   return maxFlow;
