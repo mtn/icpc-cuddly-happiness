@@ -24,17 +24,42 @@ GraphNode::~GraphNode()
 
 }
 
-const std::list<std::pair<const Key, Weight>>* GraphNode::getNeighbors() const
+const std::unordered_map<Key, Weight>* GraphNode::getNeighbors() const
 {
   return &this->neighbors;
 }
 
 void GraphNode::addNeighbor(const Key& k, Weight weight)
 {
-  this->neighbors.push_front(std::pair<Key, Weight>(k, weight));
+  this->neighbors[k] = weight;
 }
 
-void GraphNode::removeNeighbor(const Key& k)
+bool GraphNode::containsNeighbor(const Key& k) const
+{
+  return this->neighbors.find(k) != this->neighbors.end();
+}
+
+Weight GraphNode::getNeighbor(const Key& k) const
+{
+  if (containsNeighbor(k))
+  {
+    return this->neighbors.at(k);
+  }
+  return 0;
+}
+
+Weight GraphNode::setNeighbor(const Key& k, Weight weight)
+{
+  Weight prevWeight = 0;
+  if (containsNeighbor(k))
+  {
+    prevWeight = this->neighbors[k];
+  }
+  this->neighbors[k] = weight;
+  return prevWeight;
+}
+
+Weight GraphNode::removeNeighbor(const Key& k)
 {
   // For each neighbor, remove if the neighbor's key is k
   for (auto it = this->neighbors.begin(); it != this->neighbors.end();)
@@ -42,13 +67,16 @@ void GraphNode::removeNeighbor(const Key& k)
     // If the key of this element of the list is the given key
     if (it->first == k)
     {
-      // Remove this item from the neighbors list and get the iterator
-      // to the element right after the removed one
+      // Remove this item from the neighbors list and return the weight
+      Weight w = it->second;
       it = this->neighbors.erase(it);
+      return w;
     }
     else // Otherwise advance the iterator past this element of the list
       ++it;
   }
+
+  return 0;
 }
 
 /**
@@ -150,24 +178,47 @@ const GraphNode* Graph::getNode(const Key& key) const
   return this->nodes.find(key)->second;
 }
 
-const GraphNode* Graph::operator[](const Key& key) const
+const Value Graph::operator[](const Key& key) const
 {
-  return this->getNode(key);
+  return this->getNode(key)->value;
 }
 
 // Create an edge between two new nodes of the graph
 void Graph::makeEdge(const Key& k, const Key& j, Weight weight)
 {
   // Ensure that both given nodes are in the graph
-  if (containsNode(k))
+  ASSERT(containsNode(k), "Graph Does Not Contain " + k);
+  ASSERT(containsNode(j), "Graph Does Not Contain " + j);
+
+  this->nodes[k]->addNeighbor(j, weight); // If both are link them together
+}
+
+Weight Graph::removeEdge(const Key& k, const Key& j)
+{
+  // Ensure that both given nodes are in the graph
+  ASSERT(containsNode(k), "Graph Does Not Contain " + k);
+  ASSERT(containsNode(j), "Graph Does Not Contain " + j);
+
+  Weight w = this->nodes[k]->removeNeighbor(j);
+  return w;
+}
+
+Weight Graph::updateEdge(const Key& k, const Key& v, Weight weight)
+{
+  // Ensure that both given nodes are in the graph
+  ASSERT(containsNode(k), "Graph Does Not Contain " + k);
+  ASSERT(containsNode(v), "Graph Does Not Contain " + v);
+
+  if (this->nodes[k]->containsNeighbor(v))
   {
-    if (containsNode(j))
-      this->nodes[k]->addNeighbor(j, weight); // If both are link them together
-    else
-      ASSERT(0, "Graph Does Not Contain " + j);
+    // If there is an existing edge update it and return the previous
+    Weight prev = this->nodes[k]->getNeighbor(v);
+    this->nodes[k]->setNeighbor(v, weight);
+    return prev;
   }
   else
-    ASSERT(0, "Graph Does Not Contain " + k);
+    this->nodes[k]->addNeighbor(v, weight); // Otherwise create a new one.
+  return 0;
 }
 
 struct WeightPair
@@ -175,6 +226,7 @@ struct WeightPair
   Key k;
   Key from;
   Weight w;
+  Weight edgeWeight;
 };
 
 bool operator<(const WeightPair& a, const WeightPair& b)
@@ -202,7 +254,7 @@ Graph* Graph::dijkstra(Key startNode)
     Graph* outGraph = new Graph();
 
     std::priority_queue<WeightPair> nextNodes;
-    nextNodes.push(WeightPair{startNode, startNode, 0});
+    nextNodes.push(WeightPair{startNode, startNode, 0, 0});
 
     while (!nextNodes.empty())
     {
@@ -223,15 +275,15 @@ Graph* Graph::dijkstra(Key startNode)
         // start at this point. Then enqueue all attached nodes.
         outGraph->insertNode(wp.k, wp.w);
         if (wp.k != wp.from)
-          outGraph->makeEdge(wp.k, wp.from, wp.w - (*outGraph)[wp.from]->value);
+          outGraph->makeEdge(wp.k, wp.from, wp.edgeWeight);
 
-        auto neighbors = (*this)[wp.k]->getNeighbors();
+        auto neighbors = (*this).getNode(wp.k)->getNeighbors();
         for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
         {
           // Push a WeightPair which points to the node at the end of this edge,
           // points from the current node we are looking at, and has a weight
           // of the distance from this node to the start plus the edge.
-          nextNodes.push(WeightPair{it->first, wp.k, wp.w + it->second});
+          nextNodes.push(WeightPair{it->first, wp.k, wp.w + it->second, it->second});
         }
       }
     }
@@ -241,6 +293,146 @@ Graph* Graph::dijkstra(Key startNode)
   else
     ASSERT(0, "Graph Does Not Contain " + startNode);
   return nullptr;
+}
+
+Graph* Graph::clone()
+{
+  Graph* copy = new Graph();
+
+  // Iterate over the graph nodes and add them to the new graph
+  auto it = this->nodes.begin();
+  for (; it != this->nodes.end(); ++it)
+  {
+    copy->insertNode(it->first, it->second->value);
+  }
+
+  // Iterate over the graph edges and add them to the new graph
+  it = this->nodes.begin();
+  for (; it != this->nodes.end(); ++it)
+  {
+    auto node = this->getNode(it->first);
+    auto edgeIt = node->getNeighbors()->begin();
+    for (; edgeIt != node->getNeighbors()->end(); ++edgeIt)
+    {
+      copy->makeEdge(it->first, edgeIt->first, edgeIt->second);
+    }
+  }
+
+  return copy;
+}
+
+Graph* Graph::frodFulkersonDij(const Key& source, const Key& terminal)
+{
+  ASSERT(containsNode(source), "Does not contain source node " + source);
+  ASSERT(containsNode(terminal), "Does not contain terminal node " + terminal);
+
+  Graph* outGraph = new Graph();
+
+  std::priority_queue<WeightPair> nextNodes;
+  nextNodes.push(WeightPair{source, source, INT_MIN, 0});
+
+  while (!nextNodes.empty())
+  {
+    // Dequeue the next item from the queue
+    WeightPair wp = nextNodes.top();
+    nextNodes.pop();
+
+    // Determine if the node that this item is representing has already been
+    // added to the graph
+    if (outGraph->containsNode(wp.k))
+    {
+      // If so, skip this item.
+      continue;
+    }
+    else
+    {
+      // If not, add it into the graph. It is the least distance node from
+      // start at this point. Then enqueue all attached nodes.
+      outGraph->insertNode(wp.k, wp.w);
+      if (wp.k != wp.from)
+        outGraph->makeEdge(wp.k, wp.from, wp.edgeWeight);
+
+      // Terminate early
+      if (wp.k == terminal) return outGraph;
+
+      auto neighbors = (*this).getNode(wp.k)->getNeighbors();
+      for (auto it = neighbors->begin(); it != neighbors->end(); ++it)
+      {
+        // Push a WeightPair which points to the node at the end of this edge,
+        // points from the current node we are looking at, and has a weight
+        // of the distance from this node to the start plus the edge.
+        nextNodes.push(WeightPair{it->first, wp.k, std::max(-it->second, wp.w), it->second});
+      }
+    }
+  }
+
+  return outGraph;
+}
+
+Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
+{
+  Graph* resid = this->clone();
+
+  Weight maxFlow = 0;
+
+  Graph* dij = resid->frodFulkersonDij(source, terminal);
+
+  while (dij->containsNode(terminal))
+  {
+    // Huge integer so that any flow will be less than this
+    Weight pathFlow = INT_MAX;
+    auto node = dij->getNode(terminal);
+    auto startNode = dij->getNode(source);
+    auto edge = node->getNeighbors()->begin();
+    while (node != startNode)
+    {
+      // Get the minimum of the edge weight between the end of the edge
+      // and the beginning and the maximum path flow.
+      pathFlow = std::min(pathFlow, edge->second);
+      // Get the next node along the path
+      node = dij->getNode(edge->first);
+      // and its first edge (only because of the output of dijkstra)
+      edge = node->getNeighbors()->begin();
+    }
+
+    // Get the name of the end node of an edge
+    auto nodeName = terminal;
+    node = dij->getNode(terminal);
+    startNode = dij->getNode(source);
+    edge = node->getNeighbors()->begin();
+    while (node != startNode)
+    {
+      // Determine the new weight of the edge from edgeEnd to node
+      int newWeight = edge->second - pathFlow;
+      if (newWeight == 0)
+        resid->removeEdge(edge->first, nodeName);
+      else
+        resid->updateEdge(edge->first, nodeName, newWeight);
+
+      // If there is a path going backwards from node to the end of the edge
+      if (resid->getNode(nodeName)->containsNeighbor(edge->first))
+      {
+        // Then increase that reverse flow by the path flow
+        resid->updateEdge(nodeName, edge->first,
+          resid->getNode(nodeName)->getNeighbor(edge->first) + pathFlow);
+      }
+      else
+      {
+        resid->makeEdge(nodeName, edge->first, pathFlow);
+      }
+
+      // Move on to the next node in the path
+      nodeName = edge->first;
+      node = dij->getNode(edge->first);
+      edge = node->getNeighbors()->begin();
+    }
+
+    maxFlow += pathFlow;
+    delete dij;
+    dij = resid->frodFulkersonDij(source, terminal);
+  }
+
+  return maxFlow;
 }
 
 /**
@@ -263,7 +455,7 @@ bool Graph::operator==(const Graph* g) const
     }
 
     // Ensure that edges and values stored are the same
-    if (!(*((*this)[it->first]) == (*g)[it->first])) return false;
+    if (!(*getNode(it->first) == g->getNode(it->first))) return false;
   }
 
   // Check that the other Graph has no nodes in it that this does not.

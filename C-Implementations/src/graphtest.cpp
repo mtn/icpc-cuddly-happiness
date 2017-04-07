@@ -15,6 +15,7 @@ int main(void)
   input.insertNode("E", 5);
   input.insertNode("F", 6);
   input.insertNode("G", 7);
+  input.insertNode("H", 8);
   // Create edges between nodes
   input.makeEdge("A", "B", 5);
   input.makeEdge("A", "C", 7);
@@ -30,6 +31,7 @@ int main(void)
   input.makeEdge("F", "G", 15);
   input.makeEdge("G", "C", 8);
   input.makeEdge("G", "F", 2);
+  input.makeEdge("G", "H", 1);
 
   // Create the dijkstra uptree centered at "A"
   Graph* output = input.dijkstra("A");
@@ -43,6 +45,7 @@ int main(void)
   expectedOutput.insertNode("E", 17);
   expectedOutput.insertNode("F", 9);
   expectedOutput.insertNode("G", 20);
+  expectedOutput.insertNode("H", 21);
   // Add in the expected path edges
   expectedOutput.makeEdge("B", "A", 5);
   expectedOutput.makeEdge("C", "B", 1);
@@ -50,6 +53,7 @@ int main(void)
   expectedOutput.makeEdge("E", "D", 2);
   expectedOutput.makeEdge("F", "C", 3);
   expectedOutput.makeEdge("G", "D", 5);
+  expectedOutput.makeEdge("H", "G", 1);
 
   bool gotExpected = (expectedOutput == output);
   std::cout << "Got expected output:" << gotExpected << '\n';
@@ -60,4 +64,21 @@ int main(void)
     std::cout << "Expected Output Graph:\n";
     expectedOutput.print();
   }
+
+  Graph ff0;
+  ff0.insertNode("s", 0);
+  ff0.insertNode("a", 1);
+  ff0.insertNode("b", 2);
+  ff0.insertNode("t", 3);
+  // Make edges
+  ff0.makeEdge("s", "a", 1);
+  ff0.makeEdge("a", "t", 1);
+  ff0.makeEdge("s", "b", 1);
+  ff0.makeEdge("b", "a", 1);
+  ff0.makeEdge("b", "t", 1);
+
+  std::cout << "Ford Fulkerson Result: " << ff0.fordFulkerson("s", "t") << "\n";
+  std::cout << "FF Crazy A-H (1)  " << input.fordFulkerson("A", "H") << "\n";
+  std::cout << "FF Crazy A-C (12) " << input.fordFulkerson("A", "C") << "\n";
+  std::cout << "FF Crazy A-D (9)  " << input.fordFulkerson("A", "D") << "\n";
 }
