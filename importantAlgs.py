@@ -47,6 +47,9 @@ def Dykstra(graph,source):
     heapq.heapify( closestHeap )
     # Iterate until we've seen everything
     while len(unVisited) != 0:
+        if len(closestHeap) ==0:
+            print('Graph unconnected')
+            return None,None
         _, node = heapq.heappop(closestHeap)
         if node not in unVisited:
             continue
@@ -74,7 +77,6 @@ def BellmanFord(graph,source):
         dist[u] = float('inf')
         prev[u] = None
         edges += [(u,v,weight) for v,weight in graph[u].items()]
-    print(edges)
     dist[source] = 0
 
     # Relax repeatedly
@@ -109,25 +111,58 @@ def Kruskall(graph):
             union(UF,pu,pv)
     return minSpanTree
 
+def FordDykstra(graph,source):
+    """
+    finds the single source all destinations shortest paths on a non-negative
+    weighted tree.
+    Input:  Dictionary { node : {neighbor:weight} }
+    Output: Dictionaries dist and prev
+    """
+    unVisited = set(graph.keys())
+    dist = {u: float('inf') for u in graph.keys() }
+    prev = {u: None for u in graph.keys() }
+    # Initialize source and priority queue
+    dist[source] = 0
+    closestHeap = [(-w,n) for n,w in graph[source].items() ] + [(0,source)]
+    heapq.heapify( closestHeap )
+    # Iterate until we've seen everything
+    while len(unVisited) != 0:
+        if len(closestHeap) ==0:
+            print('Graph unconnected')
+            return None,None
+        prevWeight, node = heapq.heappop(closestHeap)
+        if node not in unVisited:
+            continue
+        unVisited.remove(node)
+        # bring neighbors closer
+        for neighbor, weight in graph[node].items():
+            assert weight >= 0, 'negative weights'
+            alt = max(-weight, prevWeight)
+            dist[neighbor] = alt
+            prev[neighbor] = node
+            heapq.heappush(closestHeap, (alt,neighbor))
+    return dist, prev
 
 def residualGraph(graph, flow, delta):
     """
     Input: graph  {node : [(neighbor,capacity)]}
-           flow   {(u,v) : flow}
+           flow   {u :{v:flow}}
     Delta scaling rule, residual graph ignores weights smaller than delta
     Output: residual graph {node : [(neighbor,capacity)]}
     """
-    rg = {}
+    rg = {u:{} for u in graph}
+    rg['T'] = {}
     for u in graph:
-        for v,c in graph[u]:
-            forward = flow[(u,v)]
-            backward = c - flow[(u,v)]
-            assert foward   >= 0, 'flow error1'
-            assert backward >= 0, 'flow error2'
-            if forward > delta:
-                rg[(u,v)] = forward
-            if backward > delta:
-                rg[(v,u)] = backward
+        for v,c in graph[u].items():
+            backward = flow[u][v]
+            forward = c - flow[u][v]
+            assert forward <= c,  flow # 'capacty contraint'
+            assert forward  >= 0, '- flow error1'
+            assert backward >= 0, '- flow error2'
+            if forward >= delta:
+                rg[u][v] = forward
+            if backward >= delta:
+                rg[v][u] = backward
     return rg
 
 def improvingFlow(residualGraph,graph, source, terminal):
@@ -135,9 +170,11 @@ def improvingFlow(residualGraph,graph, source, terminal):
     I: residual graph, source node, terminal node
     O: improvingFlow
     """
-    dist, prev = Dykstra(residualGraph,source)
+    dist, prev = FordDykstra(residualGraph,source)
+    if dist == None:
+        return None,None
     if dist[terminal] == float('inf'):
-        return None
+        return None,None
     else:
         v = terminal
         u = None
@@ -145,13 +182,13 @@ def improvingFlow(residualGraph,graph, source, terminal):
         mincap = float('inf')
         while u != source:
             u = prev[v]
-            cap = max(graph[u].get(v,-float('inf')),
-                      graph[v].get(u,-float('inf')))
+            cap = max(graph.get(u,{}).get(v,-float('inf')),
+                      graph.get(v,{}).get(u,-float('inf')))
             assert cap > -float('inf'), 'No Edge in graph'
             mincap = min(cap,mincap)
             path.append((u,v))
             v = u
-        return amt,path
+        return mincap,path
 
 def augmentFlow(flow,impF,amt):
     """
@@ -182,18 +219,27 @@ def FordFulkerson(graph, source, terminal):
     # Find total capacity for delta scaling rule
     totalCapacity = 0
     for u in graph:
-        for v,cap in graph[u]:
-            flow[(u,v)] = 0
+        for v,cap in graph[u].items():
             totalCapacity += cap
     delta = int(math.log2(totalCapacity))
     # Iterate until no improving flow and Delta is 0
     impF = None
     while delta > 0 or impF:
-        print(delta)
-        rg = residualGraph(graph,flow)
+        rg = residualGraph(graph,flow,delta)
         amt, impF = improvingFlow(rg,graph,source,terminal)
         if impF:
             augmentFlow(flow,impF,amt)
         else:
             delta //= 2
+
     return flow
+
+
+def fibbonacci(n):
+    """
+    formula for nth digit
+    """
+    decimal.getcontext().prec = 20
+    phi = decimal.Decimal((1+5.0**.5)/2)
+    psi = decimal.Decimal((1-5.0**.5)/2)
+    return int((phi ** n - psi ** n)/decimal.Decimal(5.0**.5))
