@@ -321,7 +321,7 @@ Graph* Graph::clone()
   return copy;
 }
 
-Graph* Graph::frodFulkersonDij(const Key& source, const Key& terminal)
+Graph* Graph::fordFulkersonDij(const Key& source, const Key& terminal)
 {
   ASSERT(containsNode(source), "Does not contain source node " + source);
   ASSERT(containsNode(terminal), "Does not contain terminal node " + terminal);
@@ -375,7 +375,7 @@ Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
 
   Weight maxFlow = 0;
 
-  Graph* dij = resid->frodFulkersonDij(source, terminal);
+  Graph* dij = resid->fordFulkersonDij(source, terminal);
 
   while (dij->containsNode(terminal))
   {
@@ -429,7 +429,7 @@ Weight Graph::fordFulkerson(const Key& source, const Key& terminal)
 
     maxFlow += pathFlow;
     delete dij;
-    dij = resid->frodFulkersonDij(source, terminal);
+    dij = resid->fordFulkersonDij(source, terminal);
   }
 
   return maxFlow;
