@@ -57,4 +57,15 @@ def testKruskal():
     print('Kruskal:3')
     print(Kruskall(ex3))
 
-testKruskal()
+ex4 = {
+    'S': {'A': 1, 'B': 1},
+    'A': {'T': 1},
+    'B': {'A': 1, 'T':1}
+}
+
+def FF():
+    print('-'*10)
+    print('FF:1')
+    return FordFulkerson(ex4,'S','T')
+
+print(FF())
