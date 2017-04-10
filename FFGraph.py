@@ -1,129 +1,134 @@
 import heapq
 
-class Edge(object):
-
-  def __init__(self, weight, start, end, revEdge=None):
-
-    self.weight = weight
-    self.start = start
-    self.end = end
-    self.revEdge = None
-
-  def __isub__(self, other):
-
-    if isinstance(other, Edge):
-
-      self.weight -= other.weight
-      if self.revEdge:
-        self.revEdge.weight += other.weight
-
-    else:
-
-      self.weight -= other
-      if self.revEdge:
-        self.revEdge.weight += other
-
-    return self
-
-  def __str__(self): return str(self.weight)
-  def __repr__(self): return str(self.weight)
-
-class RelatedEdge(object):
-
-  def __init__(self, connectedEdges, weight, start, end, revEdge=None):
-
-    self.connectedEdges = connectedEdges
-    self._weight = weight
-    self.start = start
-    self.end = end
-    self.revEdge = None
-
-  @property
-  def weight(self):
-    # Get the minimum weight of the edges this node is fused
-    # to and the weight of this node itself
-    weight = self._weight
-    for edge in self.connectedEdges:
-      weight = min(weight, edge.weight)
-    return weight
-
-  @weight.setter
-  def weight(self, newWeight):
-
-    difference = newWeight - self._weight
-    for edge in self.connectedEdges:
-      edge.weight += difference
-    self._weight = newWeight
-
-  def __isub__(self, other):
-
-    if isinstance(other, Edge):
-
-      other = other.weight
-
-    self.weight -= other
-    if self.revEdge:
-      self.revEdge.weight += other
-
-    return self
-
-  def __str__(self): return str(self.weight)
-  def __repr__(self): return str(self.weight)
-
 class FFGraph(object):
 
   def __init__(self):
+    # Nodes is a dictionary in the format of
+    #   {node: {node: (weight, [(pool, isReverseEdge)])}}
     self.nodes = dict()
+    # Pools is a dictionary in the format of
+    #   {pool: (forwardAmount, backwardAmount)}
+    self.pools = dict()
 
+  # Gets the weight of the edge connecting two nodes
   def __getitem__(self, keys):
 
     start, end = keys
-    return self.nodes[start][end]
+    return self._edgeWeight(start, end)
 
-  def __setitem__(self, keys, value):
+  def _edgeWeight(self, start, end):
 
-    start, end = None, None
-    if len(keys) == 2:
-      start, end = keys
-      newEdge = Edge(value, start, end)
-      revEdge = Edge(0, end, start, newEdge)
-      newEdge.revEdge = revEdge
+    # Grab the edge connecting these two nodes
+    edge = self.nodes[start][end]
 
+    # Grab the weight of said edge
+    edgeWeight = edge[0]
+    # And then restrict the weight to the minimal remaining flow in each pool
+    # it is attached to
+    for pool in edge[1]:
+      edgeWeight = min(self.pools[pool[0]][(1 if pool[1] else 0)], edgeWeight)
+
+    # return that minimal flow
+    return edgeWeight
+
+  def _decreaseEdgeWeight(self, start, end, amount):
+
+    # Grab the edge connecting these two nodes
+    edge = self.nodes[start][end]
+
+    # Grab the weight of said edge
+    amount = min(edge[0], amount)
+    # And then restrict the weight to the minimal remaining flow in each pool
+    # it is attached to
+    for pool in edge[1]:
+      amount = min(self.pools[pool[0]][1 if pool[1] else 0], amount)
+
+    # Change the weight of this edge based on the amount to be removed
+    self.nodes[start][end] = (edge[0] - amount, edge[1])
+    # Change the weight of the pools based on the amount to be removed
+    for pool in edge[1]:
+      fWeight, rWeight = self.pools[pool[0]]
+      fWeight -= (-amount if pool[1] else amount)
+      rWeight += (-amount if pool[1] else amount)
+      self.pools[pool[0]] = (fWeight, rWeight)
+    # Change the weight of the reverse edge by amount
+    edge = self.nodes[end][start]
+    self.nodes[end][start] = (edge[0] + amount, edge[1])
+
+  def newPool(self, poolName, value):
+
+    self.pools[poolName] = (value, 0)
+
+  def __setitem__(self, keys, weight):
+
+    # If multiple arguments were passed
+    if isinstance(keys, tuple):
+
+      # Variables for holding data
+      start, end = None, None
+      edge, revEdge = None, None
+
+      # If two arguments were passed then treat them as a start node and end
+      # node and create an edge between them
+      if len(keys) == 2:
+
+        # Get the start and end nodes as variable
+        start, end = keys
+        # Create a new pool of flow to draw from for that edge
+        self.pools[(start, end)] = (weight, 0)
+        # Create the forward and reverse edges from the given nodes
+        edge = (weight, [((start, end), False)])
+        revEdge = (0, [((start, end), True)])
+
+      # If three arguments are passed then treat them as a start node, end node
+      # and finally a list of pools to pull from
+      elif len(keys) == 3:
+
+        start, end, pools = keys
+        # Ensure pools is iterable if it is a single item
+        try:
+          iter(pools)
+        except:
+          pools = [pools]
+        # Create the edge drawing from those pools
+        edge = (weight, [(pool, False) for pool in pools])
+        revEdge = (0, [(pool, True) for pool in pools])
+
+      # If 4 arguments are passed further treat the 4th argument as whether a
+      # given pool value is reversed. Assume false for any non-specified pool
+      # values
+      elif len(keys) == 4:
+
+        start, end, pools, directions = keys
+        # Ensure pools and directions are iterable if they are single items
+        try:
+          iter(pools)
+        except:
+          pools = [pools]
+        try:
+          iter(directions)
+        except:
+          directions = [directions]
+        numDirections = len(directions)
+        # Create the edge drawing from those pools with the specified directions
+        edge = (weight, [(pools[i], False if i >= numDirections else directions[i]) for i in range(len(pools))])
+        revEdge = (0, [(pools[i], True if i >= numDirections else not directions[i]) for i in range(len(pools))])
+
+      # Add the edges to the graph
       if start in self.nodes:
-        self.nodes[start][end] = newEdge
+        self.nodes[start][end] = edge
       else:
-        self.nodes[start] = {end: newEdge}
+        self.nodes[start] = {end: edge}
       if end in self.nodes:
         self.nodes[end][start] = revEdge
       else:
         self.nodes[end] = {start: revEdge}
 
-  def join(self, edges, weight):
-
-    #ensure edges go to same place, have large enough weights, etc
-    end = edges[0].end
-    revEdges = []
-    starts = []
-    for edge in edges:
-      if edge.end != end: return
-      if edge.weight < weight: return
-      starts.append(edge.start)
-      if edge.revEdge:
-        revEdges.append(edge.revEdge)
-
-    start = tuple(starts)
-    newEdge = RelatedEdge(edges, weight, start, end)
-    revEdge = RelatedEdge(revEdges, weight, end, start)
-    newEdge.revEdge = revEdge
-
-    if start in self.nodes:
-      self.nodes[start][end] = newEdge
+    # If only one key argument was passed
     else:
-      self.nodes[start] = {end: newEdge}
-    if end in self.nodes:
-      self.nodes[end][start] = revEdge
-    else:
-      self.nodes[end] = {start: revEdge}
+
+      # Create a new pool of that identifier
+      self.pools[keys] = weight
 
   def _fdijkstra(self, source, terminal):
     unVisited = set(self.nodes.keys())
@@ -144,8 +149,8 @@ class FFGraph(object):
           break
         unVisited.remove(node)
         # bring neighbors closer
-        for neighbor, edge in self.nodes[node].items():
-            weight = edge.weight
+        for neighbor in self.nodes[node]:
+            weight = self[node, neighbor]
             assert weight >= 0, 'negative weights'
             if weight <= 0: continue ## Skip edges that can't carry flow
             alt = max(-weight, prevWeight)
@@ -158,8 +163,7 @@ class FFGraph(object):
 
     u = path[0]
     for v in path[1:]:
-      edge = self[u, v]
-      edge -= amount
+      self._decreaseEdgeWeight(u, v, amount)
       u = v
 
   def _findPath(self, source, terminal):
@@ -214,7 +218,7 @@ if __name__ == "__main__":
   graph['S', 'D'] = 1
   graph['E', 'T'] = 2
   graph['F', 'T'] = 2
-  graph.join([graph['E', 'T'], graph['F', 'T']], 1)
+  graph[('E', 'F'), 'T', [('E', 'T'), ('F', 'T')]] = 1
   graph['A', 'E'] = 1
   graph['B', ('E', 'F')] = 1
   graph['C', 'F'] = 1
