@@ -7,6 +7,8 @@ def insertQueen(x, y, board):
             return False
         if (x + offset, y + offset) in board:
             return False
+        if (x - offset, y + offset) in board:
+            return False
     board.add((x, y))
     return True
 
@@ -15,6 +17,9 @@ failed = False
 
 for y in range(8):
     x = input().find("*")
+    if(x == -1):
+        failed = True
+        break
     if not insertQueen(x, y, board):
         failed = True
         break
