@@ -5,9 +5,8 @@
 int main(){
     int num;
     scanf("%d",&num);
-printf("%d\n",num);
+    getchar();
     char* n1 = malloc(sizeof(int)*1000);
-    int stopReading = 0;
     for(int i = 0; i < 1000; i++){
         int temp = getchar();
         if (temp == '\n' || temp == EOF)
