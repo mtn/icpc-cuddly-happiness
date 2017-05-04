@@ -1,0 +1,7 @@
+name: GraphTest
+cmd:  make
+args:
+  - GraphTest
+  - RunGraphTest
+sh:  true
+cwd: "{PROJECT_PATH}/C-Implementations/Build"
