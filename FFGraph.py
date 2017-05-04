@@ -224,3 +224,31 @@ if __name__ == "__main__":
   graph['C', 'F'] = 1
   graph['D', 'F'] = 1
   print(graph.FordFulkerson('S', 'T'))
+
+  # Generate ford fulkerson graph for dots game
+  graph = FFGraph()
+  n = 3
+  for x in range(n-1):
+    for y in range(n-1):
+      graph.newPool(("S", x, y), 3)
+  for x in range(n):
+    for y in range(n):
+      graph[(x, y, "'"), "T"] = 1
+      graph["S", (x, y)] = 1
+      # Connect up
+      if y - 1 >= 0:
+        if x - 1 >= 0 and x < n - 1:
+          graph[(x, y), (x, y-1, "'"), [("S", x, y-1), ("S", x-1, y-1)]] = 1
+        elif x - 1 >= 0:
+          graph[(x, y), (x, y-1, "'"), [("S", x - 1, y-1)]] = 1
+        else:
+          graph[(x, y), (x, y-1, "'"), [("S", x, y-1)]] = 1
+      # Connect right
+      if x + 1 < n:
+        if y - 1 >= 0 and y < n - 1:
+          graph[(x, y), (x+1, y, "'"), [("S", x, y), ("S", x, y-1)]] = 1
+        elif y - 1 >= 0:
+          graph[(x, y), (x+1, y, "'"), [("S", x, y-1)]] = 1
+        else:
+          graph[(x, y), (x+1, y, "'"), [("S", x, y)]] = 1
+  print(graph.FordFulkerson("S", "T"), graph.pools.items())
