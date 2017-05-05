@@ -119,7 +119,7 @@ class Graph{
      * Output: A graph similar dijkstra's but where instead of shortest paths
      *         the largest minimum weight is prioritized
      */
-   Graph* frodFulkersonDij(const Key& source, const Key& terminal);
+   Graph* fordFulkersonDij(const Key& source, const Key& terminal);
    public:
     /**
      * Input:  A start and terminal node
